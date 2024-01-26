@@ -1,0 +1,7 @@
+version: '3.9'
+services:
+  auth_api:
+    image: auth_api
+    build: .
+    env_file:
+      - .env.prod
