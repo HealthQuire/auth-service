@@ -43,3 +43,13 @@ class TokenProvider:
         if service_from_token is None or service_from_token != service_from:
             raise exceptions.InvalidServiceFrom
         return {"user_id": user_id, "service_from": service_from}
+
+    @classmethod
+    def refresh_tokens(cls, service_from: str, access_token: str, refresh_token: str):
+        payload = jwt.decode(refresh_token, cls._SECRET_KEY, algorithms=[cls._ALGORITHM])
+        if payload.get("access_token") != access_token:
+            raise exceptions.InvalidAccessToken
+        service_from_token = payload.get("access_token")
+        if service_from_token is None or service_from_token != service_from:
+            raise exceptions.InvalidServiceFrom
+        return cls.create_tokens(int(payload.get("user_id")), service_from)

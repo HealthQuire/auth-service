@@ -16,6 +16,13 @@ async def create_wallet(user_id: int = Header(), service_from: str = Header()):
 async def decode_token(service_from: str = Header(),
                        access_token: str = Header()):
     return servises.TokenProvider.decode_token(service_from, access_token)
+
+
+@auth_router.post("/refresh_token")
+async def refresh_tokens(service_from: str = Header(),
+                         access_token: str = Header(),
+                         refresh_token: str = Header()):
+    return servises.TokenProvider.refresh_tokens(service_from, access_token, refresh_token)
 # load_env()
 # _CODE_EXPIRES = timedelta(seconds=int(environ.get("CODE_EXPIRES")))
 # PWD_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
