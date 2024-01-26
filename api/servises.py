@@ -1,8 +1,9 @@
 from os import environ
-from jose import jwt
+from jose import jwt, JWTError
 from datetime import datetime, timedelta
 from load_env import load_env
-# from api import exceptions
+
+from api import exceptions
 
 load_env()
 
@@ -28,3 +29,17 @@ class TokenProvider:
         data.update({"access_token": access_token})
         refresh_token = cls._create_token(data, cls._REFRESH_TOKEN_EXPIRE_DAYS)
         return {"access_token": access_token, "refresh_token": refresh_token}
+
+    @classmethod
+    def decode_token(cls, service_from: str, access_token: str):
+        try:
+            payload = jwt.decode(access_token, cls._SECRET_KEY, algorithms=[cls._ALGORITHM])
+        except JWTError:
+            raise exceptions.TokenExpired
+        user_id = payload.get("user_id")
+        if user_id is None:
+            raise exceptions.TokenExpired
+        service_from_token = payload.get("service_from")
+        if service_from_token is None or service_from_token != service_from:
+            raise exceptions.InvalidServiceFrom
+        return {"user_id": user_id, "service_from": service_from}

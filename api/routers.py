@@ -11,7 +11,11 @@ auth_router = APIRouter()
 async def create_wallet(user_id: int = Header(), service_from: str = Header()):
     return servises.TokenProvider.create_tokens(user_id, service_from)
 
-#
+
+@auth_router.post("/decode_token")
+async def decode_token(service_from: str = Header(),
+                       access_token: str = Header()):
+    return servises.TokenProvider.decode_token(service_from, access_token)
 # load_env()
 # _CODE_EXPIRES = timedelta(seconds=int(environ.get("CODE_EXPIRES")))
 # PWD_CONTEXT = CryptContext(schemes=["bcrypt"], deprecated="auto")
