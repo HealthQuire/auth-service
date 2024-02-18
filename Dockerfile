@@ -8,4 +8,5 @@ RUN pip3 install -r requirements.txt
 
 # RUN ["chmod", "+x", "entrypoint.sh"]
 # CMD ["./entrypoint.sh"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+RUN ["python3 main.py"]
