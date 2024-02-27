@@ -7,5 +7,5 @@ _LOAD = False
 def load_env():
     global _LOAD
     if not _LOAD and environ.get("PRODUCTION") is None or environ.get("PRODUCTION") == "false":
-        load_dotenv(".env")
+        load_dotenv(".env.prod")
         _LOAD = True
