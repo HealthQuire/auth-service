@@ -15,6 +15,11 @@ class TokenProvider:
         minutes=int(environ.get("ACCESS_TOKEN_EXPIRE_MINUTES")))
     _REFRESH_TOKEN_EXPIRE_DAYS = timedelta(days=int(environ.get("REFRESH_TOKEN_EXPIRE_HOURS")))
 
+    # TODO: add checking user authorization
+    @classmethod
+    def _check_authorization(cls, login: str, password: str) -> dict:
+        return {"user_id": 1, "user_role": 6}
+
     @classmethod
     def _create_token(cls, data: dict, expires_delta: timedelta) -> str:
         expire = datetime.utcnow() + expires_delta
@@ -23,33 +28,37 @@ class TokenProvider:
         return encoded_jwt
 
     @classmethod
-    def create_tokens(cls, user_id: int, service_from: str):
-        data = {"user_id": user_id, "service_from": service_from}
+    def _create_access_refresh(cls, data: dict):
         access_token = cls._create_token(data, cls._ACCESS_TOKEN_EXPIRE_MINUTES)
         data.update({"access_token": access_token})
         refresh_token = cls._create_token(data, cls._REFRESH_TOKEN_EXPIRE_DAYS)
         return {"access_token": access_token, "refresh_token": refresh_token}
 
     @classmethod
-    def decode_token(cls, service_from: str, access_token: str):
+    def create_tokens(cls, login: str, password: str):
+        user_data = cls._check_authorization(login, password)
+        return cls._create_access_refresh(user_data)
+
+    @classmethod
+    def decode_token(cls, access_token: str):
         try:
             payload = jwt.decode(access_token, cls._SECRET_KEY, algorithms=[cls._ALGORITHM])
         except JWTError:
             raise exceptions.TokenExpired
         user_id = payload.get("user_id")
-        if user_id is None:
+        user_role = payload.get("user_role")
+        if user_id is None or user_role:
             raise exceptions.TokenExpired
-        service_from_token = payload.get("service_from")
-        if service_from_token is None or service_from_token != service_from:
-            raise exceptions.InvalidServiceFrom
-        return {"user_id": user_id, "service_from": service_from}
+        return {"user_id": user_id, "user_role": user_role}
 
     @classmethod
-    def refresh_tokens(cls, service_from: str, access_token: str, refresh_token: str):
+    def refresh_tokens(cls, access_token: str, refresh_token: str):
         payload = jwt.decode(refresh_token, cls._SECRET_KEY, algorithms=[cls._ALGORITHM])
         if payload.get("access_token") != access_token:
             raise exceptions.InvalidAccessToken
-        service_from_token = payload.get("access_token")
-        if service_from_token is None or service_from_token != service_from:
-            raise exceptions.InvalidServiceFrom
-        return cls.create_tokens(int(payload.get("user_id")), service_from)
+        user_role = payload.get("user_role")
+        user_id = payload.get("user_id")
+        if user_role is None or user_id is None:
+            raise exceptions.InvalidAccessToken
+        user_data = {"user_id": user_id, "user_role": user_role}
+        return cls._create_access_refresh(user_data)
