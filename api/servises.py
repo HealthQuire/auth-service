@@ -1,4 +1,6 @@
 from os import environ
+
+import requests
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 from load_env import load_env
@@ -9,16 +11,22 @@ load_env()
 
 
 class TokenProvider:
+    _LOGIN_ENDPOINT = environ.get("LOGIN_ENDPOINT")
     _SECRET_KEY = environ.get("SECRET_KEY")
     _ALGORITHM = environ.get("ALGORITHM")
     _ACCESS_TOKEN_EXPIRE_MINUTES = timedelta(
         minutes=int(environ.get("ACCESS_TOKEN_EXPIRE_MINUTES")))
     _REFRESH_TOKEN_EXPIRE_DAYS = timedelta(days=int(environ.get("REFRESH_TOKEN_EXPIRE_HOURS")))
 
-    # TODO: add checking user authorization
     @classmethod
     def _check_authorization(cls, login: str, password: str) -> dict:
-        return {"user_id": 1, "user_role": 6}
+        res = requests.post(cls._LOGIN_ENDPOINT, json={"password": password, "email": login})
+        if res.status_code == 500:
+            raise exceptions.WrongPassword
+        if res.status_code == 404:
+            raise exceptions.UserNotExist
+        data = res.json()
+        return {"user_id": data["id"], "user_role": data["role"]}
 
     @classmethod
     def _create_token(cls, data: dict, expires_delta: timedelta) -> str:
@@ -47,13 +55,16 @@ class TokenProvider:
             raise exceptions.TokenExpired
         user_id = payload.get("user_id")
         user_role = payload.get("user_role")
-        if user_id is None or user_role:
+        if user_id is None or user_role is None:
             raise exceptions.TokenExpired
         return {"user_id": user_id, "user_role": user_role}
 
     @classmethod
     def refresh_tokens(cls, access_token: str, refresh_token: str):
-        payload = jwt.decode(refresh_token, cls._SECRET_KEY, algorithms=[cls._ALGORITHM])
+        try:
+            payload = jwt.decode(refresh_token, cls._SECRET_KEY, algorithms=[cls._ALGORITHM])
+        except JWTError:
+            raise exceptions.TokenExpired
         if payload.get("access_token") != access_token:
             raise exceptions.InvalidAccessToken
         user_role = payload.get("user_role")
